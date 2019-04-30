@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import *
@@ -9,7 +10,9 @@ def urand(xs): return xs[randint(0, len(xs))]
 def dot(x, y): return np.dot(x, y)
 # d = dimension
 # ts = training samples. List of (xi, yi)
-def train_linear(d, lam, T, ts, debug=False):
+# Fig 1. Pegasos algorithm
+def train_linear(d, lam, ts, debug=False):
+    T = len(ts)
     w = z(d)
     t = 1
     while t <= T:
@@ -58,14 +61,62 @@ def train_linear(d, lam, T, ts, debug=False):
         t += 1
     return w
 
-def classify(w, x):
+def classify_linear(w, x):
     return 1 if dot(w, x) >= 1 else -1
+
+# create a gaussian kernel for d dimensions. Use
+# the outer function to create a closure for the inner function.
+def gaussianK(x1, x2):
+    n = np.linalg.norm(x1 - x2)
+    sigma = 1.0
+    return math.e ** (-(n * n)/ (2 * sigma))
+
+# Figure 3: kernelized pegasos
+# d: dimension
+# lambda: tuning parameter
+# ts: training samples
+# K: kernel function:  (training vec x training vec -> float)
+def train_kernel(d, lam, ts, K, debug=False):
+    T = len(ts)
+    lam = float(lam)
+    n = len(ts)
+    # alpha
+    a = z(T)
+    t = 1
+    while t <= T:
+        i = randint(0, n)
+        (xi, yi) = ts[i]
+
+        # score
+        s = 0
+        for j in range(n):
+            (xj, _) = ts[j]
+            s += a[j] * yi * K(xi, xj)
+        s *= yi * 1.0 / (lam * float(t))
+
+        if s < 1:
+            a[i] = a[i] + 1
+        t += 1
+    return a
+
+# a: alpha computed from training
+# x: point to classify
+# ts: training samples
+# K: kernel function
+def classify_kernel(a, x, ts, K):
+    s = 0
+    for j in range(len(ts)):
+        (xj, _) = ts[j]
+        s += a[j] * K(x, xj)
+
+    return 1 if s >= 1 else -1
 
 def bool2y(b):
     return 1 if b else -1
 
 
-def train_test_linear():
+def train_test_linreg_linear():
+    print("LINEAR REGRESSION (with linear SVM): ")
     NTRAIN = 100000
     ts = []
     for _ in range(NTRAIN):
@@ -74,7 +125,7 @@ def train_test_linear():
         t = bool2y(x1 > 3 *  x2)
         ts.append((np.asarray([x1, x2]), t))
 
-    w = train_linear(2, 0.025, len(ts), ts, debug=False)
+    w = train_linear(2, 0.01, ts, debug=False)
 
     loss = 0
     ts = []
@@ -83,15 +134,47 @@ def train_test_linear():
         x1 = np.random.rand()
         x2 = np.random.rand()
         t = bool2y(x1 > 3 * x2)
-        if classify(w, np.asarray([x1, x2])) != t:
+        if classify_linear(w, np.asarray([x1, x2])) != t:
             loss += 1 
 
     print("total loss: ", loss)
     print("avg loss: ", loss / NTEST)
     
 
+def train_test_quad_kernel():
+    print("QUADRATIC (with kernel):")
+    NTRAIN = 100
+    ts = []
+    for _ in range(NTRAIN):
+        x1 = np.random.rand() * 10
+        x2 = np.random.rand() * 10
+        t = bool2y(x1 > 3 *  x2 * x2)
+        ts.append((np.asarray([x1, x2]), t))
+
+    a = train_kernel(2, 0.01, ts, K=gaussianK, debug=False)
+
+    loss = 0
+    ts = []
+    NTEST = 10
+    for _ in range(NTEST):
+        x1 = np.random.rand()
+        x2 = np.random.rand()
+        t = bool2y(x1 > 3 * x2)
+        if classify_kernel(a, np.asarray([x1, x2]), ts, gaussianK) != t:
+            loss += 1 
+
+    print("total loss: ", loss)
+    print("avg loss: ", loss / NTEST)
+
+def train_test_fashion_linear():
+    print("FASHION: ")
+    pass
+
 if __name__ == "__main__":
-    train_test_linear()
+    mnist_reader.load_mnist(".")
+    train_test_linreg_linear()
+    train_test_quad_kernel()
+    train_test_fashion_linear()
     pass
     
 
