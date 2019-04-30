@@ -254,23 +254,40 @@ def test_fashion_kernel(a):
 
 ## Performance metrics
 The variables are:
+
 - `d`: dimension of each training sample
+
 - `N`: number of training samples
+
 - `T`: number of training iterations
+
 - Complexity of dot product: `d^2`.
+
 - Complexity of the polynomial kernel: `O(dot product ~= d^2`.
+
 - Complexity for non-kernelized: `O(#iterations) * O(dot product) ~= Td^2`.
+
 - Complexity for kernelized: `O(#iterations) * O(#samples) * O(kernel) ~= TNd^2`.
+
+
 
 ## How to run
 To run the sample models, run:
+
 - `./pegasos.py --demofashion`
+
 - `./pegasos.py --demolinear`
+
 - `./pegasos.py --democubic`
+
+
 These trains and tests the model and prints the results. Useful to get a
 feel for how the model trains.
 
 - `./pegasos.py --trainfashion`
+
 - `./pegasos.py --testfashion`
+
+
 The `--trainfashion` command trains the model for `(N=10000)` and dumps
 out a binary file which `--testfashion` picks up.
