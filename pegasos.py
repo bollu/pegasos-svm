@@ -254,24 +254,32 @@ def train_test_quad_kernel():
     print("avg loss: ", loss / NTEST)
 
 
+# return list of tuples of (x, y)
+def load_mnist(path, kind):
+    (xs, ys) = mnist_reader.load_mnist(path, kind=kind)
+    legal = ys <= 1
+    xs = xs[legal]
+    ys = ys[legal]
+    return list(zip(xs, ys))
+
 # train the fashion kernel on the large dataset
 def train_fashion_kernel(N):
     print("FASHION (first %s): " % N)
-    (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
-    ts = list(zip(x_train, y_train))
+    ts = load_mnist(".",kind="train")
     ts = ts[:N]
     print("fashion dataset sample: ", ts[0])
 
     a = train_kernel_poly(0.01, ts, debug=False)
     return a
 
-def test_fashion_kernel(a):
-    (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
-    ts = list(zip(x_train, y_train))
-    ts = ts[:len(a)]
 
-    (xs, ys) = mnist_reader.load_mnist(".", kind="t10k")
-    tests = list(zip(xs, ys))
+
+def test_fashion_kernel(a):
+    # take the first 'a' lenght sample from the traning set
+    # since the vector 'a' describes their weights
+    ts = load_mnist(".", kind="train")[:len(a)]
+
+    tests = load_mnist(".", kind="t10k")
     tests = tests[:1000]
 
     print("number of test samples: ", len(tests))
@@ -304,7 +312,7 @@ if __name__ == "__main__":
     
     p = parse(sys.argv[1:])
     if p.command == "trainfashion":
-        a = train_fashion_kernel(100000)
+        a = train_fashion_kernel(10000)
         with open("kernel-coeff.bin", "wb") as f:
             pickle.dump(a, f)
     if p.command == "testfashion":
