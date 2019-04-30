@@ -7,9 +7,8 @@ import mnist_reader
 from itertools import *
 import numba
 import pickle
-
-def urand(xs): return xs[randint(0, len(xs))]
-def dot(x, y): return np.dot(x, y)
+import sys
+import argparse
 
 
 class ETA:
@@ -254,21 +253,27 @@ def train_test_quad_kernel():
     print("total loss: ", loss)
     print("avg loss: ", loss / NTEST)
 
-def train_test_fashion_kernel():
-    print("FASHION: ")
+
+# train the fashion kernel on the large dataset
+def train_fashion_kernel(N):
+    print("FASHION (first %s): " % N)
     (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
     ts = list(zip(x_train, y_train))
-    ts = ts[:1000]
+    ts = ts[:N]
     print("fashion dataset sample: ", ts[0])
 
     a = train_kernel_poly(0.01, ts, debug=False)
+    return a
 
-    with open("kernel-coeff.bin", "wb") as f:
-        pickle.dump(a, f)
+def test_fashion_kernel(a):
+    (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
+    ts = list(zip(x_train, y_train))
+    ts = ts[:len(a)]
 
     (xs, ys) = mnist_reader.load_mnist(".", kind="t10k")
     tests = list(zip(xs, ys))
     tests = tests[:1000]
+
     print("number of test samples: ", len(tests))
     loss = 0
     for (x,y) in tests:
@@ -277,10 +282,38 @@ def train_test_fashion_kernel():
     print("total loss: ", loss)
     print("avg loss: ", loss / len(tests))
 
+def sample_train_test_fashion_kernel():
+    print("FASHION: ")
+    (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
+    ts = list(zip(x_train, y_train))
+    ts = ts[:1000]
+    print("fashion dataset sample: ", ts[0])
+
+
+def parse(s):
+    p = argparse.ArgumentParser()
+
+    sub = p.add_subparsers(dest="command")
+    trainfashion = sub.add_parser("trainfashion", help="train the model")
+    testfashion = sub.add_parser("testfashion", help="test the fashion")
+    dummyfashion = sub.add_parser("dummyfashion", help="test the model")
+
+    return p.parse_args(s)
+
 if __name__ == "__main__":
-    # train_test_linreg_linear()
-    # train_test_quad_kernel()
-    train_test_fashion_kernel()
+    
+    p = parse(sys.argv[1:])
+    if p.command == "trainfashion":
+        a = train_fashion_kernel(100000)
+        with open("kernel-coeff.bin", "wb") as f:
+            pickle.dump(a, f)
+    if p.command == "testfashion":
+        with open("kernel-coeff.bin", "r") as f:
+            a = pickle.load(f)
+        test_fashion_kernel(a)
+    else:
+        a = train_fashion_kernel(1000)
+        test_fashion_kernel(a)
     pass
     
 
