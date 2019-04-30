@@ -4,16 +4,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import *
 import mnist_reader
+from itertools import *
+import numba
+import pickle
 
-def z(n): return np.zeros(n)
 def urand(xs): return xs[randint(0, len(xs))]
 def dot(x, y): return np.dot(x, y)
+
+
+class ETA:
+    def __init__(self, _n):
+        self.n = _n
+        self.i = 0
+
+    def bump(self):
+        self.i += 1
+
+    def ratio(self):
+        return float(self.i) / self.n
+
+    def percent(self):
+        return "%4.2f %%" % (self.ratio() * 100)
+
 # d = dimension
 # ts = training samples. List of (xi, yi)
 # Fig 1. Pegasos algorithm
 def train_linear(d, lam, ts, debug=False):
     T = len(ts)
-    w = z(d)
+    w = np.zeros(d)
     t = 1
     while t <= T:
         eta = 1.0 / (float(lam) * float(t))
@@ -66,38 +84,107 @@ def classify_linear(w, x):
 
 # create a gaussian kernel for d dimensions. Use
 # the outer function to create a closure for the inner function.
+@numba.jit(nopython=True)
 def gaussianK(x1, x2):
-    n = np.linalg.norm(x1 - x2)
+    v = x1 - x2
+    nsq = 0.0
+    for i in range(len(x1)):
+        nsq += v[i] * v[i]
     sigma = 1.0
-    return math.e ** (-(n * n)/ (2 * sigma))
+    return math.e ** (-nsq / (2 * sigma))
+
+# @numba.jit(nopython=True)
+# d: dimension
+# p: power to raise
+def polynomialK(x1, x2, d, p):
+    s = np.dot(x1, x2)
+#    s = 0
+#    i = 0
+#    while i < d:
+#        s += x1[i] * x2[i]
+#        i += 1
+#
+    return (s + 1) ^ p
 
 # Figure 3: kernelized pegasos
 # d: dimension
 # lambda: tuning parameter
 # ts: training samples
 # K: kernel function:  (training vec x training vec -> float)
-def train_kernel(d, lam, ts, K, debug=False):
+@numba.jit(nopython=True)
+def train_kernel_gauss(lam, ts, debug=False):
     T = len(ts)
     lam = float(lam)
     n = len(ts)
     # alpha
-    a = z(T)
+    a = np.zeros(T)
     t = 1
+    ixs = randint(0, n, size=(T+2))
+    print(" ")
     while t <= T:
-        i = randint(0, n)
+        i = ixs[t]
         (xi, yi) = ts[i]
 
         # score
         s = 0
-        for j in range(n):
+        j = 0
+        while j < n:
             (xj, _) = ts[j]
-            s += a[j] * yi * K(xi, xj)
+            s += a[j] * yi * gaussianK(xi, xj)
+            j += 1
+
         s *= yi * 1.0 / (lam * float(t))
 
         if s < 1:
             a[i] = a[i] + 1
         t += 1
+        if t % (T // 100) == 0:
+            print("\rdone: " , float(t)/T * 100.0, "%")
     return a
+
+
+# @numba.jit(nopython=True)
+def train_kernel_poly(lam, ts, pow=3, debug=False):
+    T = len(ts)
+    lam = float(lam)
+    n = len(ts)
+    # alpha
+    a = np.zeros(T)
+    # dimension of the training vectors
+    d = len(ts[0][0])
+    # training sample
+    t = 1
+    ixs = randint(0, n, size=(T+2))
+    print(" ")
+    while t <= T:
+        i = ixs[t]
+        (xi, yi) = ts[i]
+
+        # score
+        s = 0
+        j = 0
+        while j < n:
+            (xj, _) = ts[j]
+            s += a[j] * yi * polynomialK(xi, xj, d, pow)
+            j += 1
+
+        s *= yi * 1.0 / (lam * float(t))
+
+        if s < 1:
+            a[i] = a[i] + 1
+        t += 1
+        print("\rdone: " , float(t)/T * 100.0, "%")
+    return a
+
+# specialization of classify_kernel for K = polynomialK
+# @numba.jit(nopython=True)
+def classify_kernel_poly(a, x, ts, pow=3):
+    d = ts[0][0]
+    s = 0
+    for j in range(len(ts)):
+        (xj, _) = ts[j]
+        s += a[j] * polynomialK(x, xj, d, pow)
+    return 1 if s >= 1 else -1
 
 # a: alpha computed from training
 # x: point to classify
@@ -113,6 +200,7 @@ def classify_kernel(a, x, ts, K):
 
 def bool2y(b):
     return 1 if b else -1
+
 
 
 def train_test_linreg_linear():
@@ -143,7 +231,7 @@ def train_test_linreg_linear():
 
 def train_test_quad_kernel():
     print("QUADRATIC (with kernel):")
-    NTRAIN = 100
+    NTRAIN = 1000
     ts = []
     for _ in range(NTRAIN):
         x1 = np.random.rand() * 10
@@ -151,7 +239,7 @@ def train_test_quad_kernel():
         t = bool2y(x1 > 3 *  x2 * x2)
         ts.append((np.asarray([x1, x2]), t))
 
-    a = train_kernel(2, 0.01, ts, K=gaussianK, debug=False)
+    a = train_kernel_poly(0.01, ts, debug=False)
 
     loss = 0
     ts = []
@@ -166,15 +254,33 @@ def train_test_quad_kernel():
     print("total loss: ", loss)
     print("avg loss: ", loss / NTEST)
 
-def train_test_fashion_linear():
+def train_test_fashion_kernel():
     print("FASHION: ")
-    pass
+    (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
+    ts = list(zip(x_train, y_train))
+    ts = ts[:1000]
+    print("fashion dataset sample: ", ts[0])
+
+    a = train_kernel_poly(0.01, ts, debug=False)
+
+    with open("kernel-coeff.bin", "wb") as f:
+        pickle.dump(a, f)
+
+    (xs, ys) = mnist_reader.load_mnist(".", kind="t10k")
+    tests = list(zip(xs, ys))
+    tests = tests[:1000]
+    print("number of test samples: ", len(tests))
+    loss = 0
+    for (x,y) in tests:
+        if classify_kernel_poly(a, x, ts) != y:
+            loss += 1
+    print("total loss: ", loss)
+    print("avg loss: ", loss / len(tests))
 
 if __name__ == "__main__":
-    mnist_reader.load_mnist(".")
-    train_test_linreg_linear()
-    train_test_quad_kernel()
-    train_test_fashion_linear()
+    # train_test_linreg_linear()
+    # train_test_quad_kernel()
+    train_test_fashion_kernel()
     pass
     
 
