@@ -40,13 +40,17 @@ def train_linear(d, lam, ts, T=None, debug=False):
 
     # loop for the samples
     while t <= T:
+        # calculate eta
         eta = 1.0 / (float(lam) * float(t))
+        # current sample (x, y)
         (x, y) = ts[ixs[t]]
+
         if y * np.dot(w, x) < 1:
             w = (1 - eta * lam) * w + eta * y * x
         else: 
             w = (1 - eta * lam) * w
 
+        # Debugging code to plot the hyperplanes
         if debug and t % (T//50) == 0:
             if d == 2:
                 fig = plt.figure()
@@ -119,7 +123,6 @@ def polynomialK(x1, x2, d, p):
 def train_kernel_gauss(lam, ts, debug=False):
     T = len(ts)
     lam = float(lam)
-    n = len(ts)
     # alpha
     a = np.zeros(T)
     t = 1
@@ -161,7 +164,7 @@ def train_kernel_poly(lam, ts, T=None, pow=3):
     lam = float(lam)
     n = len(ts)
     # alpha
-    a = np.zeros(T)
+    a = np.zeros(len(ts))
     # dimension of the training vectors
     d = len(ts[0][0])
     # training sample

@@ -1,2 +1,7 @@
+.PHONY=zip
+
 report.pdf: README.md
-	pandoc report.md -o report.pdf
+	pandoc README.md -o report.pdf
+
+zip:
+	cd ../ && zip 20161105-pegasos.zip -R pegasos/
