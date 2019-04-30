@@ -282,6 +282,7 @@ def test_fashion_kernel(a):
     tests = load_mnist(".", kind="t10k")
     tests = tests[:1000]
 
+    print("number of train samples trained on: ", len(a))
     print("number of test samples: ", len(tests))
     loss = 0
     for (x,y) in tests:
@@ -315,13 +316,12 @@ if __name__ == "__main__":
         a = train_fashion_kernel(10000)
         with open("kernel-coeff.bin", "wb") as f:
             pickle.dump(a, f)
-    if p.command == "testfashion":
-        with open("kernel-coeff.bin", "r") as f:
+    elif p.command == "testfashion":
+        with open("kernel-coeff.bin", "rb") as f:
             a = pickle.load(f)
         test_fashion_kernel(a)
     else:
         a = train_fashion_kernel(1000)
         test_fashion_kernel(a)
-    pass
     
 
