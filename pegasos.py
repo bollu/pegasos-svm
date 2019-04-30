@@ -286,7 +286,7 @@ def load_mnist(path, kind):
 # train the fashion kernel on the large dataset
 def train_fashion_kernel(N):
     print("FASHION (first %s): " % N)
-    ts = load_mnist(".",kind="train")
+    ts = load_mnist("data",kind="train")
     ts = ts[:N]
     print("fashion dataset sample: ", ts[0])
 
@@ -298,9 +298,9 @@ def train_fashion_kernel(N):
 def test_fashion_kernel(a):
     # take the first 'a' lenght sample from the traning set
     # since the vector 'a' describes their weights
-    ts = load_mnist(".", kind="train")[:len(a)]
+    ts = load_mnist("data", kind="train")[:len(a)]
 
-    tests = load_mnist(".", kind="t10k")
+    tests = load_mnist("data", kind="t10k")
     tests = tests[:300]
 
     print("\n\n")
@@ -321,7 +321,7 @@ def test_fashion_kernel(a):
 
 def sample_train_test_fashion_kernel():
     print("FASHION: ")
-    (x_train, y_train) = mnist_reader.load_mnist(".", kind="train")
+    (x_train, y_train) = mnist_reader.load_mnist("data", kind="train")
     ts = list(zip(x_train, y_train))
     ts = ts[:1000]
     print("fashion dataset sample: ", ts[0])

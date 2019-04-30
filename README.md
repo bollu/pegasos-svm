@@ -218,7 +218,7 @@ def load_mnist(path, kind):
 # N=number of training points.
 def train_fashion_kernel(N):
     print("FASHION (first %s): " % N)
-    ts = load_mnist(".",kind="train")
+    ts = load_mnist("./data",kind="train")
     ts = ts[:N]
     print("fashion dataset sample: ", ts[0])
 
@@ -230,9 +230,9 @@ def train_fashion_kernel(N):
 def test_fashion_kernel(a):
     # take the first 'a' lenght sample from the traning set
     # since the vector 'a' describes their weights
-    ts = load_mnist(".", kind="train")[:len(a)]
+    ts = load_mnist("./data", kind="train")[:len(a)]
 
-    tests = load_mnist(".", kind="t10k")
+    tests = load_mnist("./data", kind="t10k")
     tests = tests[:300]
 
     print("\n\n")
@@ -272,6 +272,11 @@ The variables are:
 
 
 ## How to run
+[Download the fashion-MNIST dataset, folder `fashion-mnist/data/fashion/*.gz`](https://github.com/zalandoresearch/fashion-mnist/tree/master/data/fashion)
+and save the `*.gz` files inside the `./data/` folder. This provides
+the fashion-MNIST models.
+
+
 To run the sample models, run:
 
 - `./pegasos.py --demofashion`
