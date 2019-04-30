@@ -26,13 +26,19 @@ class ETA:
         return "%4.2f %%" % (self.ratio() * 100)
 
 # d = dimension
+# lam=lambda
 # ts = training samples. List of (xi, yi)
+# T = number of iterations
 # Fig 1. Pegasos algorithm
-def train_linear(d, lam, ts, debug=False):
-    T = len(ts)
-    w = np.zeros(d)
-    t = 1
-    ixs = randint(0, len(ts), size=T + 1)
+def train_linear(d, lam, ts, T=None, debug=False):
+    if T is None:
+        T = len(ts) * 2
+
+    w = np.zeros(d) # weight vector
+    t = 1 # current iteration
+    ixs = randint(0, len(ts), size=T + 1) # generate random indeces
+
+    # loop for the samples
     while t <= T:
         eta = 1.0 / (float(lam) * float(t))
         (x, y) = ts[ixs[t]]
@@ -142,8 +148,16 @@ def train_kernel_gauss(lam, ts, debug=False):
 
 
 # Figure 3
-def train_kernel_poly(lam, ts, pow=3, debug=False):
-    T = len(ts)
+# lam = lambda
+# ts = training samples. List of (xi, yi)
+# T = number of timesteps
+# pow = polynomial to raise the kernel: (1 + x_i . x_j)^pow
+def train_kernel_poly(lam, ts, T=None, pow=3):
+    if T is None:
+        T = len(ts)*3
+
+    print ("training poly kernel. #samples: %d | lambda: %4.3f | T: %d | pow: %4.2f" % 
+                (len(ts), lam, T, pow))
     lam = float(lam)
     n = len(ts)
     # alpha
@@ -237,7 +251,7 @@ def train_test_cube_kernel():
         t = bool2y(x1 >=  x2 * x2  * x2)
         ts.append((np.asarray([x1, x2]), t))
 
-    a = train_kernel_poly(0.01, ts, debug=False)
+    a = train_kernel_poly(0.01, ts, T=len(ts)*10)
 
     loss = 0
     NTEST = 100
@@ -273,7 +287,7 @@ def train_fashion_kernel(N):
     ts = ts[:N]
     print("fashion dataset sample: ", ts[0])
 
-    a = train_kernel_poly(0.01, ts, debug=False)
+    a = train_kernel_poly(0.01, ts, T=len(ts)*10)
     return a
 
 
@@ -284,7 +298,7 @@ def test_fashion_kernel(a):
     ts = load_mnist(".", kind="train")[:len(a)]
 
     tests = load_mnist(".", kind="t10k")
-    tests = tests[:1000]
+    tests = tests[:300]
 
     print("\n\n")
     print("#train : ", len(a))
@@ -334,7 +348,7 @@ if __name__ == "__main__":
             a = pickle.load(f)
         test_fashion_kernel(a)
     elif p.command =="demofashion":
-        a = train_fashion_kernel(1000)
+        a = train_fashion_kernel(400)
         test_fashion_kernel(a)
     elif p.command =="democubic":
         train_test_cube_kernel()
